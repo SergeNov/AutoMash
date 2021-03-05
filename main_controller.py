@@ -2,61 +2,14 @@ import sys
 import json
 import time
 import datetime
+import redis
 import lib.config as config
-import lib.bluetooth as bluetooth
-import lib.relay as relay
 
 schedule_path = sys.argv[1]
 fh = open(schedule_path, "r")
 schedule =  json.loads(fh.read())
 
-check_ts = datetime.datetime.now()
-check_temp = 0
-is_heating = False
-
-def control_kettle(temp_range):
-  global check_ts
-  global check_temp
-  global is_heating
-  min_temp = float(temp_range['min_temp'])
-  max_temp = float(temp_range['max_temp'])
-  avg_temp = (min_temp + max_temp) / 2
-  # Read kettle temperature
-  thermometers = bluetooth.read_thermometers()
-  message = json.dumps(thermometers) + "; "
-  temp = thermometers['kettle']
-  if check_ts > datetime.datetime.now() - datetime.timedelta(seconds=300):
-    if is_heating and temp<check_temp-1:
-       flush()
-    check_temp = temp
-    check_ts = datetime.datetime.now()
-  # Enable/disable heaters to keep temperature within range
-  if temp >= max_temp:
-    relay.disable('heater1')
-    message += "heater1: off; "
-    is_heating = False
-  else:
-    relay.enable('heater1')
-    message += "heater1: on; "
-    is_heating = True
-    check_ts = datetime.datetime.now()
-    check_temp = temp
-  if temp >= avg_temp:
-    relay.disable('heater2')
-    message += "heater2: off; "
-  else:
-    relay.enable('heater2')
-    message += "heater2: on; "
-  config.oneliner(message)
-  # If temperature within range, return true; else, return false
-  if temp >= min_temp and temp <= max_temp:
-    return True
-  else:
-    return False
-
-def flush():
-  config.log("Flushing the mash!")
-  relay.activate('mash->kettle', 300)
+r = redis.Redis()
 
 def control_mash(temp_range, kettle_range):
   min_temp = float(temp_range['min_temp'])
@@ -109,12 +62,21 @@ def control_mash(temp_range, kettle_range):
 
 def step(step_properties):
   name = step_properties["name"]
+  kettle_min_temp = step_properties["kettle"]["min_temp"]
+  kettle_max_temp = step_properties["kettle"]["max_temp"]
   config.log("Step: "+name)
   while True:
-    # 1. Make sure kettle temperature is within range
-    kettle_pass = control_kettle(step_properties['kettle'])
-    if not kettle_pass:
-      continue
+    # 1. make sure the kettle controller knows target temperature
+    r_kettle_min_temp = r.get('kettle_min_temp')
+    r_kettle_max_temp = r.get('kettle_min_temp')
+    if r_kettle_min_temp != kettle_min_temp or r_kettle_max_temp != kettle_max_temp:
+      r.set('kettle_min_temp', kettle_min_temp)
+      r.set('kettle_max_temp', kettle_max_temp)
+      r.set('kettle_good', "0")
+    else:
+      if r.get("kettle_good") != "1": #If kettle is not within target range, do not continue
+        time.sleep(1)
+        continue
     # 2. Make sure mash temperature is within range
     mash_pass = control_mash(step_properties['mash'], step_properties['kettle'])
     if not mash_pass:
