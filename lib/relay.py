@@ -26,19 +26,17 @@ def init():
 def cleanup():
   GPIO.cleanup()
 
-def activate_timed(relay_device, duration):
-  config.log("  Activate "+relay_device)
+def activate(relay_device, duration):
+  # activate device for N seconds. mainly for pumps
   params = relay[relay_device]
   off = params['off']
   on = params['on']
   pin = params['pin']
   GPIO.output(pin, on)
   time.sleep(duration)
-  config.log("  Disable "+relay_device)
   GPIO.output(pin, off)
 
-def activate(relay_device):
-  config.log("  Activate "+relay_device)
+def enable(relay_device):
   params = relay[relay_device]
   off = params['off']
   on = params['on']
@@ -46,7 +44,6 @@ def activate(relay_device):
   GPIO.output(pin, on)
 
 def disable(relay_device):
-  config.log("  Activate "+relay_device)
   params = relay[relay_device]
   off = params['off']
   on = params['on']

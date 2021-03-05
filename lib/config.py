@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import datetime
 
@@ -15,3 +16,7 @@ bluetooth = json.loads(fh.read())
 def log(message):
   ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
   print(ts+" "+message)
+
+def oneliner(message):
+  sys.stdout.write(message+"\r")
+  sys.stdout.flush()

@@ -4,9 +4,10 @@ import datetime
 import subprocess
 import tempfile
 import json
+import redis
 
-import config as conf
-import blue_parser
+import lib.config as conf
+import lib.blue_parser as blue_parser
 
 config = conf.bluetooth
 config_index = {}
@@ -22,20 +23,22 @@ hcidump_cmd = ["hcidump", "-i", "hci_device", "--raw", "hci"]
 tempf = tempfile.TemporaryFile(mode="w+b")
 devnull = open(os.devnull, "wb")
 
-def read_thermometers():
+#Opening connections
+hcitool = subprocess.Popen(
+          hcitool_cmd, stdout=devnull, stderr=devnull
+      )
+hcidump = subprocess.Popen(
+          hcidump_cmd,
+          stdout=tempf,
+          stderr=devnull
+      )
+r = redis.Redis()
 
-  #Opening connections
-  hcitool = subprocess.Popen(
-            hcitool_cmd, stdout=devnull, stderr=devnull
-        )
-  hcidump = subprocess.Popen(
-            hcidump_cmd,
-            stdout=tempf,
-            stderr=devnull
-        )
+print config_index
 
-  #Collecting data
-  for i in range(20):
+#Infinite loop of scanning bluetooth
+try:
+  while True:
     c = 0
     time.sleep(1)
     tempf.flush()
@@ -55,24 +58,15 @@ def read_thermometers():
         if result != None and "mac" in result and result["mac"] in config_index and "temperature" in result:
           result["data"] = data
           device_name = config_index[result["mac"]]
-          for k, v in config[device_name].items():
-            result[k] = v 
-          stats[device_name] = result
+          r.setex(device_name+"_temp", 60, result['temperature'])
+          ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+          r.setex(device_name+"_hist_"+ts, 300, result['temperature'])
       except:
         pass
-    if len(stats) == len(config_index):
-      break
     tempf.truncate(0)
-
-  #Closing connections
+finally:
+  # Closing connections
   hcidump.kill()
   hcidump.communicate()
   hcitool.kill()
   hcitool.communicate()
-
-  #We only need temperature for each thermometer, so no need to return all stats
-  result = {}
-  for device in stats:
-    result[device] = stats[device]["temperature"]
-
-  return result
