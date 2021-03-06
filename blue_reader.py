@@ -36,6 +36,8 @@ r = redis.Redis()
 
 print config_index
 
+temp_dict = {}
+
 #Infinite loop of scanning bluetooth
 try:
   while True:
@@ -58,9 +60,11 @@ try:
         if result != None and "mac" in result and result["mac"] in config_index and "temperature" in result:
           result["data"] = data
           device_name = config_index[result["mac"]]
-          r.setex(device_name+"_temp", 60, result['temperature'])
-          ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-          r.setex(device_name+"_hist_"+ts, 300, result['temperature'])
+          if device_name not in temp_dict or temp_dict[device_name] != result['temperature']:
+            r.set(device_name+"_temp", result['temperature'])
+            ts = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+            r.setex(device_name+"_hist_"+ts, 3600, result['temperature'])
+            temp_dict[device_name] = result['temperature']
       except:
         pass
     tempf.truncate(0)
