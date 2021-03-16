@@ -22,23 +22,30 @@ try:
       config.log("Warning: No thermometer data")
       time.sleep(1)
       continue
+    message = ""
     if temp >= max_temp:
       relay.disable('heater1')
       is_heating = False
+      message += "heater1: off; "
       heat_start = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
     else:
+      message += "heater1: on; "
       relay.enable('heater1')
       is_heating = True
     if temp >= avg_temp:
+      message += "heater2: off; "
       relay.disable('heater2')
     else:
+      message += "heater2: on; "
       relay.enable('heater2')
 
     if temp >= min_temp and temp <= max_temp:
       r.setex('kettle_good', 60, 1)
+      message += "Kettle within range"
     else:
+      message += "Kettle ourside range"
       r.setex('kettle_good', 60, 0)
-
+    config.oneliner(message)
     if not is_heating:
       continue
 
@@ -63,5 +70,6 @@ try:
         time.sleep(1)
         continue
 finally:
+  print("Disabling heaters")
   relay.disable('heater1')
   relay.disable('heater2')

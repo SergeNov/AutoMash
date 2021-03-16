@@ -15,10 +15,14 @@ def control_mash(temp_range, kettle_range):
   min_temp = float(temp_range['min_temp'])
   max_temp = float(temp_range['max_temp'])
   avg_temp = (min_temp + max_temp) / 2
-  thermometers = bluetooth.read_thermometers()
-  message = json.dumps(thermometers) + "; "
-  temp_mash = thermometers['mash']
-  temp_kettle = thermometers['kettle']
+  temp_mash = float(r.get('mash_temp'))
+  temp_kettle = float(r.get('kettle_temp'))
+  message = "Kettle temp: "+str(temp_kettle)+"; Mash temp: "+str(temp_mash)+"; "
+  kettle_good = r.get('kettle_good')
+  if kettle_good!='1':
+    message += "Kettle is at wrong temperature - waiting.."
+    config.oneliner(message)
+    return False
   if temp_mash>=max_temp:
     return False # If temperature above upper limit, nothing to do but wait
   if temp_mash>=min_temp:
@@ -96,8 +100,5 @@ def step(step_properties):
 
 
 config.log("Beginning schedule")
-try:
-  for step_properties in schedule:
-    step(step_properties)
-finally:
-  relay.cleanup()
+for step_properties in schedule:
+  step(step_properties)

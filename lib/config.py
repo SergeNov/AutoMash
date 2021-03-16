@@ -18,5 +18,6 @@ def log(message):
   print(ts+" "+message)
 
 def oneliner(message):
-  sys.stdout.write(message+"\r")
+  ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+  sys.stdout.write(ts+" "+message+"\r")
   sys.stdout.flush()
