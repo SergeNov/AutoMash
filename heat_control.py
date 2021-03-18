@@ -41,9 +41,9 @@ try:
 
     if temp >= min_temp and temp <= max_temp:
       r.setex('kettle_good', 60, 1)
-      message += "Kettle within range"
+      message += "Kettle within range - "+str(temp)+" is between ("+str(min_temp)+" and "+str(max_temp)+")"
     else:
-      message += "Kettle ourside range"
+      message += "Kettle outside range - "+str(temp)+" is not between ("+str(min_temp)+" and "+str(max_temp)+")"
       r.setex('kettle_good', 60, 0)
     config.oneliner(message)
     if not is_heating:

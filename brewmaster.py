@@ -37,25 +37,18 @@ def control_mash(temp_range, kettle_range):
   if temp_delta < 1:
     return False # If the kettle is about the same temperature as mash, pumping water is pointless
   k = 50
-  duration = k * temp_to_go/temp_delta
+  duration = int(k * temp_to_go/temp_delta)
   if duration < 5:
     duration = 5
   if duration > 60:
     duration = 60
   message += "Activating kettle->mash pump for "+str(duration)+" seconds"
   config.log(message)
-  relay.activate('kettle->mash', duration)
+  r.setex('kettle->mash', duration, "1")
   config.log("Waiting for temperature to stabilize")
   # let's assume that if the temperature doesn't change for a minute, it is good
   while True:
     #make sure to do kettle control
-    control_kettle(kettle_range)
-
-    thermometers = bluetooth.read_thermometers()
-    mash_temp_1 = thermometers["mash"]
-    time.sleep(60)
-    thermometers = bluetooth.read_thermometers()
-    mash_temp_2 = thermometers["mash"]
     config.oneliner("temperature fluctuated by "+str(abs(mash_temp_1 - mash_temp_2))+"C")
     #let's assume that if temperature changed by 1C or less, it is stable
     if abs(mash_temp_1 - mash_temp_2) <= 1:
