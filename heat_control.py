@@ -6,10 +6,11 @@ import redis
 
 import lib.config as config
 import lib.relay as relay
+import lib.ads as ads
 
 r = redis.Redis()
 is_heating=False
-heat_start = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+heat_start = datetime.datetime.now()
 try:
   while True:
     time.sleep(0.1)
@@ -27,7 +28,7 @@ try:
       relay.disable('heater1')
       is_heating = False
       message += "heater1: off; "
-      heat_start = int(datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+      heat_start = datetime.datetime.now()
     else:
       message += "heater1: on; "
       relay.enable('heater1')
@@ -50,25 +51,14 @@ try:
       continue
 
     # Check if kettle might be empty
-    keys = r.keys("kettle_hist_*")
-    keys.sort()
-    border_ts = int((datetime.datetime.now() - datetime.timedelta(seconds = 300)).strftime("%Y%m%d%H%M%S"))
-    for key in keys:
-      key_arr = key.split('_')
-      key_ts = int(key_arr[-1])
-      if key_ts > heat_start and key_ts > border_ts:
-        break
-    try:
-      old_temp = float(r.get(key))
-      if old_temp>temp:
-        #looks like the kettle is cooling
+    if is_heating and datetime.datetime.now() - heat_start > datetime.timedelta(seconds=10): # If heaters are on, and have been on for at least 10 seconds
+      amp = ads.measure_current(0)
+      if amp < 5:
         r.setex('kettle_empty', 60, 1)
       else:
         r.setex('kettle_empty', 60, 0)
-    except:
-        config.log("Warning: No thermometer history")
-        time.sleep(1)
-        continue
+    else:
+      r.setex('kettle_empty', 60, 0)
 finally:
   print("Disabling heaters")
   relay.disable('heater1')
