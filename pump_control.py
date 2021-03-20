@@ -11,24 +11,17 @@ r = redis.Redis()
 try:
   while True:
     time.sleep(0.1)
-    message = ""
     k2m = r.get("kettle2mash")
     if k2m == "1":
       k2m = True
-      message += "kettle -> mash: on; "
     else:
       k2m = False
-      message += "kettle -> mash: off; "
 
     m2k = r.get("mash2kettle")
     if m2k == "1":
       m2k = True
-      message += "mash -> kettle: on; "
     else:
       m2k = False
-      message += "mash -> kettle: off; "
-
-    config.oneliner(message)
 
     if k2m:
       relay.enable("kettle->mash")     
