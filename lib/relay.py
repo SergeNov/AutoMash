@@ -12,14 +12,12 @@ for relay_device in relay:
   relay[relay_device]['off'] = not(relay[relay_device]['on'])
 
 def init():
-  config.log("Initiating relay")
   GPIO.setwarnings(False)
   for relay_device in relay:
     params = relay[relay_device]
     off = params['off']
     on = params['on']
     pin = params['pin']
-    config.log("Initialize pin "+str(pin)+" ("+relay_device+")")
     GPIO.setup(pin,GPIO.OUT)
     GPIO.output(pin, off)
 
