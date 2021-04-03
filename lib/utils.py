@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import datetime
 import config
 import redis
@@ -75,3 +76,30 @@ def log_only(message):
   log_fh.write(ts+" "+message+"\n")
   log_fh.flush()
   last_message = message
+
+def cycle(heat_seconds):
+  log('Beginning cycle')
+  log('Heating up for '+str(heat_seconds)+" seconds")
+  r.setex('heater1', heat_seconds, 1)
+  r.setex('heater2', heat_seconds, 1)
+  time.sleep(heat_seconds)
+  log(get_status())
+  log('Moving wort from kettle to mash')
+  r.setex('kettle2mash', 300, 1)
+  time.sleep(300)
+  log(get_status())
+  log('Moving wort from mash to kettle')
+  r.setex('mash2kettle', 900, 1)
+  time.sleep(900)
+  log(get_status())
+  log('Cycle complete')
+
+def brew(seconds):
+  kettle_temp = float(r.get('kettle_temp'))
+  if kettle_temp <= 99:
+    r.setex('heater1', seconds, 1)
+  if kettle_temp <= 5:
+    r.setex('heater2', seconds, 1)
+  r.setex('kettle2mash', int(seconds/4), 1)
+  time.sleep(seconds)
+  log(get_status())

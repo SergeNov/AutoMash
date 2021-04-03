@@ -13,19 +13,20 @@ r = redis.Redis()
 
 def heaters_ctl(on):
   if on:
-    r.setex('heater1', 60, 1)
-    r.setex('heater2', 60, 1)
+    r.setex('heater1', 120, 1)
+    r.setex('heater2', 120, 1)
   else:
-    r.setex('heater1', 60, 0)
-    r.setex('heater2', 60, 0)
+    r.setex('heater1', 120, 0)
+    r.setex('heater2', 120, 0)
 
 def step(step_properties):
   heating = False
   mash_temp_reached = None
+  mash_temp = float(r.get('mash_temp'))
   mash_min_temp = step_properties['mash']['min_temp']
   duration = step_properties['duration']
   name = step_properties['name']
-  utils.log("  Commencing step: " + name)
+  utils.log("  Starting step: " + name)
   while True:
     mash_min_temp = step_properties['mash']['min_temp']
     # Turn on the heaters if mash temperature is below threshold
@@ -46,7 +47,7 @@ def step(step_properties):
         #Turn off kettle -> mash pump till heaters are working
         r.setex('kettle2mash', 120, 0)
         #sleep a minute since mash2kettle transfer is much slower
-        sleep(60)
+        time.sleep(60)
       else:
         r.setex('kettle2mash', 120, 1)
     else: #If we are here, it means mash has reached desired temperature and heaters have been disabled
@@ -59,8 +60,9 @@ def step(step_properties):
       if datetime.datetime.now() >= mash_temp_reached + datetime.timedelta(seconds = duration):
         utils.log(" Step complete: " + step_properties['name'])
         return
-    sleep(1)
+    time.sleep(1)
 
 utils.log("Beginning schedule: " + schedule_path)
 for step_properties in schedule:
   utils.log("Commencing: " + step_properties['name'])
+  step(step_properties)
