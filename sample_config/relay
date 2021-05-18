@@ -1,5 +1,7 @@
 {
-  "pump": {"pin": 26, "relay": 1, "on": false},
-  "valve": {"pin": 20, "relay": 2, "on": false},
-  "heater": {"pin": 21, "relay": 3, "on": false} 
+  "reserved": {"pin": 26, "relay": "hat1", "on": false},
+  "kettle->mash": {"pin": 20, "relay": "hat2", "on": false},
+  "mash->kettle": {"pin": 21, "relay": "hat3", "on": false},
+  "heater1": {"pin": 23, "relay": "power1", "on": true},
+  "heater2": {"pin": 24, "relay": "power2", "on": true}
 }

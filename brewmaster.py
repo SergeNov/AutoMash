@@ -23,11 +23,12 @@ def step(step_properties):
   while True:
     mash_temp = float(r.get("mash_temp"))
     kettle_temp = float(r.get("kettle_temp"))
-    message = "Mash temp: "+str(mash_temp)+"/"+str(mash_target)+"; Kettle temp: "+str(kettle_temp)+"/"+str(kettle_target)+"; "
+    message = "  Mash temp: "+str(mash_temp)+"/"+str(mash_target)+"; Kettle temp: "+str(kettle_temp)+"/"+str(kettle_target)+"; "
     if mash_temp_reached != None:
       current_wait = (datetime.datetime.now() - mash_temp_reached).total_seconds()
       message += "Waiting " + str(int(current_wait)) + "/" + str(int(duration))
       if current_wait >= duration:
+        utils.log("  Step: " + name + " completed successfully")
         return
     utils.oneliner(message)
     if mash_temp_reached == None:

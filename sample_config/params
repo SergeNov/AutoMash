@@ -1,0 +1,4 @@
+{
+  "log_dir": "/home/pi/logs",
+  "slowdown_degrees": 2
+}
