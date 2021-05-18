@@ -11,58 +11,32 @@ schedule =  json.loads(fh.read())
 
 r = redis.Redis()
 
-def heaters_ctl(on):
-  if on:
-    r.setex('heater1', 120, 1)
-    r.setex('heater2', 120, 1)
-  else:
-    r.setex('heater1', 120, 0)
-    r.setex('heater2', 120, 0)
-
 def step(step_properties):
-  heating = False
-  mash_temp_reached = None
-  mash_temp = float(r.get('mash_temp'))
-  mash_min_temp = step_properties['mash']['min_temp']
+  mash_target = step_properties['mash_temp']
+  kettle_target = step_properties['kettle_temp']
   duration = step_properties['duration']
+  r.set("mash_target", mash_target)
+  r.set("kettle_target", kettle_target)
   name = step_properties['name']
-  utils.log("  Starting step: " + name)
+  mash_temp_reached = None
+  utils.log("Starting step: " + name)
   while True:
-    mash_min_temp = step_properties['mash']['min_temp']
-    # Turn on the heaters if mash temperature is below threshold
-    if mash_temp < mash_min_temp:
-      heating = True
-    else:
-      heating = False
-
-    heaters_ctl(heating)
-
-    # Pump Control - make sure warer is being heated and constantly circulated
-    heaters_running = r.get('heaters_running')
-    if heating:
-      #If heating is in progress, mash -> kettle pump must be turned on
-      r.setex('mash2kettle', 60, 1)
-      if heating and heaters_running == '0':
-        #If heaters are on, but are not consuming power, it means kettle is empty
-        #Turn off kettle -> mash pump till heaters are working
-        r.setex('kettle2mash', 120, 0)
-        #sleep a minute since mash2kettle transfer is much slower
-        time.sleep(60)
-      else:
-        r.setex('kettle2mash', 120, 1)
-    else: #If we are here, it means mash has reached desired temperature and heaters have been disabled
-      #Turn off mash -> kettle pump; kettle -> mash pump should keep going for a while
-      r.setex('mash2kettle', 60, 0)
-      if mash_temp_reached == None:
-        mash_temp_reached == datetime.datetime.now()
-        utils.log("  Step: " + name + " - desired mash temperature reached")
+    mash_temp = float(r.get("mash_temp"))
+    kettle_temp = float(r.get("kettle_temp"))
+    message = "Mash temp: "+str(mash_temp)+"/"+str(mash_target)+"; Kettle temp: "+str(kettle_temp)+"/"+str(kettle_target)+"; "
     if mash_temp_reached != None:
-      if datetime.datetime.now() >= mash_temp_reached + datetime.timedelta(seconds = duration):
-        utils.log(" Step complete: " + step_properties['name'])
+      current_wait = (datetime.datetime.now() - mash_temp_reached).total_seconds()
+      message += "Waiting " + str(int(current_wait)) + "/" + str(int(duration))
+      if current_wait >= duration:
         return
+    utils.oneliner(message)
+    if mash_temp_reached == None:
+      if mash_temp >= mash_target:
+        mash_temp_reached = datetime.datetime.now()
+        utils.log("  Step: " + name + " - desired mash temperature reached")
+
     time.sleep(1)
 
 utils.log("Beginning schedule: " + schedule_path)
 for step_properties in schedule:
-  utils.log("Commencing: " + step_properties['name'])
   step(step_properties)

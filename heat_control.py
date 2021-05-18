@@ -1,50 +1,36 @@
 import sys
+import json
 import time
 import datetime
 import redis
-
-import lib.config as config
-import lib.relay as relay
-import lib.ads as ads
+import lib.utils as utils
 
 r = redis.Redis()
-is_heating=False
-heat_start = datetime.datetime.now()
-try:
-  while True:
-    ts = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
-    h1 = r.get('heater1')
-    h2 = r.get('heater2')
-    if h1 == '1':
-      heater1 = True
-    else:
-      heater1 = False
-    if h2 == '1':
-      heater2 = True
-    else:
-      heater2 = False
+slowdown_degrees = utils.slowdown_degrees
 
-    if heater1:
-      relay.enable('heater1')
-    else:
-      relay.disable('heater1')
-      r.set('heater1_last_off', ts)
-    if heater2:
-      relay.enable('heater2')
-    else:
-      relay.disable('heater2')
-      r.set('heater2_last_off', ts)
+while True:
+  try:
+    mash_temp = float(r.get('mash_temp'))
+    kettle_temp = float(r.get('kettle_temp'))
+    mash_target = float(r.get('mash_target'))
+    kettle_target = float(r.get('kettle_target'))
+  except:
+    continue
+  if mash_temp == None or kettle_temp == None or mash_target == None or kettle_target == None:
+    continue
+  r.setex('kettle2mash', 10, 1)
+  r.setex('mash2kettle', 10, 1)
+  time.sleep(1)
 
-    time.sleep(0.1)
-
-    amp = ads.measure_current(0)
-    heaters_running = 0
-    if amp > 10:
-      heaters_running = 1
-    if amp > 25:
-      heaters_running = 2
-    r.setex('heaters_running', 60, str(heaters_running))
-finally:
-  print("Disabling heaters")
-  relay.disable('heater1')
-  relay.disable('heater2')
+  if mash_temp >= mash_target:
+    r.setex('heater1', 10, 0)
+    r.setex('heater2', 10, 0)
+    continue
+  if kettle_temp >= kettle_target:
+    r.setex('heater1', 10, 0)
+    r.setex('heater2', 10, 0)
+    continue
+  
+  r.setex('heater1', 10, 1)
+  if kettle_temp <= kettle_target - slowdown_degrees:
+    r.setex('heater2', 10, 1)
