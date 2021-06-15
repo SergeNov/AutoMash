@@ -9,6 +9,10 @@ import ads
 r = redis.Redis()
 log_dir = config.params["log_dir"]
 slowdown_degrees = config.params["slowdown_degrees"]
+mash2kettle_min_temp = config.params["mash2kettle_min_temp"]
+mash2kettle_max_temp = config.params["mash2kettle_max_temp"]
+kettle2mash_min_temp = config.params["kettle2mash_min_temp"]
+kettle2mash_max_temp = config.params["kettle2mash_max_temp"]
 
 script_name = os.path.basename(sys.argv[0]).replace('.py','')
 log_file = log_dir + '/' + script_name + '_' + datetime.datetime.now().strftime("%Y%m%d%H%M%S") + '.log'
