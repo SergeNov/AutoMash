@@ -39,5 +39,9 @@ def step(step_properties):
     time.sleep(1)
 
 utils.log("Beginning schedule: " + schedule_path)
-for step_properties in schedule:
-  step(step_properties)
+try:
+  for step_properties in schedule:
+    step(step_properties)
+finally:
+  r.setex("mash_target", 10, 0)
+  r.setex("kettle_target", 10, 0)
